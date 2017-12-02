@@ -1,0 +1,12 @@
+E:\Neural Network\Covolutional Neural Network\bin\Debug\Covolutional_Neural_Network.exe.config
+E:\Neural Network\Covolutional Neural Network\bin\Debug\Covolutional_Neural_Network.exe
+E:\Neural Network\Covolutional Neural Network\bin\Debug\Covolutional_Neural_Network.pdb
+E:\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional Neural Network.csprojResolveAssemblyReference.cache
+E:\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.Properties.Resources.resources
+E:\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional Neural Network.csproj.GenerateResource.Cache
+E:\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.exe
+E:\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.pdb
+E:\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.Form1.resources
+U:\Neural Network\Covolutional Neural Network\bin\Debug\Covolutional_Neural_Network.exe.config
+U:\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.exe
+U:\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.pdb
