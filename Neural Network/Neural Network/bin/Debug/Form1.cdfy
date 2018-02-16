@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<CudafyModule Version="1.29.5576.13786" Name="Form1" DebugInfo="false" HasCudaSourceCode="false" HasPTX="true" HasBinary="false">
+  <CudaSourceCode></CudaSourceCode>
+  <PTXMODULES>
+    <PTXMODULE Platform="x86" Arch="sm_20" SourceCodeFile="46614ff6-c3ed-4472-afd9-66a75fa164e2">Ly8NCi8vIEdlbmVyYXRlZCBieSBOVklESUEgTlZWTSBDb21waWxlcg0KLy8NCi8vIENvbXBpbGVyIEJ1aWxkIElEOiBDTC0xOTMyNDU3NA0KLy8gQ3VkYSBjb21waWxhdGlvbiB0b29scywgcmVsZWFzZSA3LjAsIFY3LjAuMjcNCi8vIEJhc2VkIG9uIExMVk0gMy40c3ZuDQovLw0KDQoudmVyc2lvbiA0LjINCi50YXJnZXQgc21fMjANCi5hZGRyZXNzX3NpemUgMzINCg0KDQoNCg==</PTXMODULE>
+  </PTXMODULES>
+  <BinaryModules />
+  <SourceCodes>
+    <SourceCodeFile ID="46614ff6-c3ed-4472-afd9-66a75fa164e2" Language="Cuda" Arch="sm_20">DQoNCg==</SourceCodeFile>
+  </SourceCodes>
+  <Functions />
+  <Constants />
+  <Types />
+</CudafyModule>

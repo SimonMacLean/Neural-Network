@@ -15,14 +15,21 @@ namespace Neural_Network
     {
         public static int generation = 1;
         private static Random R;
-        public const int populationSize = 105;
-        public const int tests = 1000;
+        const int bestPopulation = 5;
+        public int populationSize;
+        public const int tests = 100;
         private List<NeuralNetwork> population;
         private Timer updatePopulationTimer;
         private string trainingDataPath;
         NeuralNetwork best;
+        List<double> scores = new List<double>();
         public Form1()
         {
+            populationSize = 0;
+            for(int i = 0; i < bestPopulation; i++)
+            {
+                populationSize += i + 1;
+            }
             InitializeComponent();
             R = new Random();
             population = new List<NeuralNetwork>();
@@ -34,7 +41,8 @@ namespace Neural_Network
             updatePopulationTimer.Enabled = true;
             updatePopulationTimer.Interval = 1;
             updatePopulationTimer.Tick += UpdatePopulation;
-            trainingDataPath = "C:\\Users\\simon\\Documents\\Visual Studio 2015\\Projects\\Neural Network Try 2\\Neural Network Try 2\\Images\\";
+            trainingDataPath = Path.Combine(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..")), @"Images\");
+            scores.Add(0);
         }
 
         private void UpdatePopulation(object sender, EventArgs e)
@@ -75,10 +83,10 @@ namespace Neural_Network
                     topScorers.Add(population[i]);
                     places.Add(i);
                 }
-                if (topScorers.Count >= 15)
+                if (topScorers.Count > bestPopulation)
                     break;
             }
-            for (int i = 0; topScorers.Count < 15; i++)
+            for (int i = 0; topScorers.Count <= bestPopulation; i++)
             {
                 if (places.Contains(i))
                     continue;
@@ -86,16 +94,17 @@ namespace Neural_Network
             }
             topScorers = Randomize(topScorers, R);
             List<NeuralNetwork> newPopulation = new List<NeuralNetwork>();
-            for (int i = 14; i > 0; i--)
+            for (int i = bestPopulation; i > 0; i--)
             {
                 for (int j = 0; j < i; j++)
                 {
-                    newPopulation.Add(new NeuralNetwork(topScorers[14 - i], topScorers[15 - i]));
+                    newPopulation.Add(new NeuralNetwork(topScorers[bestPopulation - i], topScorers[bestPopulation + 1 - i]));
                 }
             }
             population.RemoveAt(0);
             population.Add(best);
             population = newPopulation;
+            scores.Add(((double)best.correct / best.testsDone) * 100);
             Invalidate();
         }
         List<NeuralNetwork> Randomize(List<NeuralNetwork> sorted, Random r)
@@ -118,10 +127,21 @@ namespace Neural_Network
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
             best.Draw(e.Graphics, ClientRectangle);
+            if(scores.Count > 1)
+                DrawGraph(e.Graphics, new Rectangle(10, 90, 210, 140), scores);
         }
         public void DrawGraph(Graphics g, Rectangle Bounds, List<double> scores)
         {
-            
+            g.DrawRectangle(Pens.Black, Bounds);
+            g.DrawLine(Pens.Black, new Point(Bounds.Left + 10, Bounds.Top + 10), new Point(Bounds.Left + 10, Bounds.Bottom - 10));
+            g.DrawLine(Pens.Black, new Point(Bounds.Left + 10, Bounds.Bottom - 10), new Point(Bounds.Right - 10, Bounds.Bottom - 10));
+            Point origin = new Point(Bounds.Left + 10, Bounds.Bottom - 10);
+            Size graphSize = new Size(Bounds.Width - 20, Bounds.Height - 20);
+            //g.DrawLine(Pens.Red, origin, new Point(origin.X + graphSize.Width / scores.Count, (int)(origin.Y + graphSize.Height * scores[0] / 100)));
+            for (int i = 1; i < scores.Count; i++)
+            {
+                g.DrawLine(Pens.Red, new Point(origin.X + graphSize.Width * (i - 1) / (scores.Count - 1), (int)(origin.Y - graphSize.Height * scores[i - 1] / 100)), new Point(origin.X + graphSize.Width * i / (scores.Count - 1), (int)(origin.Y - graphSize.Height * scores[i] / 100)));
+            }
         }
     }
     public struct NeuralNetwork
@@ -133,7 +153,7 @@ namespace Neural_Network
         public int testsDone;
         public int correct;
         private Bitmap current;
-        private List<List<double>> inputs;
+        private List<double[]> inputs;
         private List<double> outputs;
         private const int mutationFrequency = 15;
         public static bool operator >(NeuralNetwork a, NeuralNetwork b)
@@ -147,11 +167,11 @@ namespace Neural_Network
         public NeuralNetwork(List<int> layersizes)
         {
             mutationRandom = new Random();
-            inputs = new List<List<double>>();
+            inputs = new List<double[]>();
             neurons = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
-            current = new Bitmap(28, 28);
+            current = new Bitmap(imageWidth, imageHeight);
             outputs = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             int layerSize = imageWidth * imageHeight;
             for (int i = 0; i < layersizes.Count; i++)
@@ -173,11 +193,11 @@ namespace Neural_Network
         public NeuralNetwork(params int[] layersizes)
         {
             mutationRandom = new Random();
-            inputs = new List<List<double>>();
+            inputs = new List<double[]>();
             neurons = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
-            current = new Bitmap(28, 28);
+            current = new Bitmap(imageWidth, imageHeight);
             outputs = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             int layerSize = imageWidth * imageHeight;
             for (int i = 0; i < layersizes.Length; i++)
@@ -200,11 +220,11 @@ namespace Neural_Network
         public NeuralNetwork(NeuralNetwork parentA, NeuralNetwork parentB)
         {
             mutationRandom = new Random();
-            inputs = new List<List<double>>();
+            inputs = new List<double[]>();
             neurons = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
-            current = new Bitmap(28, 28);
+            current = new Bitmap(imageWidth, imageHeight);
             outputs = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             int layerSize = imageWidth * imageHeight;
             for (int i = 0; i < parentA.neurons.Count; i++)
@@ -233,36 +253,34 @@ namespace Neural_Network
             neurons = original.neurons;
             testsDone = original.testsDone;
             correct = original.correct;
-            current = new Bitmap(28, 28);
+            current = new Bitmap(imageWidth, imageHeight);
             outputs = original.outputs;
         }
-        public List<double> getOutputs(Bitmap input)
+        public double[] getOutputs(Bitmap input)
         {
-            inputs = new List<List<double>>();
-            inputs.Add(new List<double>());
-            for (int i = 0; i < imageHeight; i++)
+            inputs = new List<double[]>();
+            inputs.Add(new double[784]);
+            for(int i = 0; i < imageHeight; i++)
             {
-                for (int j = 0; j < imageWidth; j++)
+                for(int j = 0; j < imageHeight; j++)
                 {
-                    Color c = input.GetPixel(j, i);
-                    double brightness = ((c.R + c.G + c.B) / 3.0) / 255.0;
-                    inputs[0].Add(brightness);
+                    inputs[0][i * imageWidth + j] = input.GetPixel(j, i).GetBrightness();
                 }
             }
             for (int i = 0; i < neurons.Count; i++)
             {
-                inputs.Add(new List<double>());
+                inputs.Add(new double[neurons[i].Count]);
                 for (int j = 0; j < neurons[i].Count; j++)
                 {
-                    inputs[i + 1].Add(neurons[i][j].GetOutput(inputs[i].ToArray()));
+                    inputs[i + 1][j] = neurons[i][j].GetOutput(inputs[i].ToArray());
                 }
             }
             return inputs[inputs.Count - 1];
         }
         public int getLikeliestOutput(Bitmap input)
         {
-            List<double> outputs = getOutputs(input);
-            return outputs.IndexOf(outputs.Max());
+            double[] outputs = getOutputs(input);
+            return outputs.ToList().IndexOf(outputs.Max());
         }
         public void Draw(Graphics g, Rectangle bounds)
         {

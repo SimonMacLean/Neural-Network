@@ -1,3 +1,25 @@
 c:\users\simon maclean\documents\visual studio 2015\Projects\Neural Network\Neural Network\bin\Debug\Neural Network.exe.config
 C:\Users\simon\Documents\Visual Studio 2015\Projects\Neural Network\Neural Network\bin\Debug\Neural Network.exe.config
 E:\Neural Network\Neural Network\bin\Debug\Neural Network.exe.config
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\bin\Debug\Neural Network.exe.config
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\bin\Debug\Neural Network.exe
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\bin\Debug\Neural Network.pdb
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\bin\Debug\Cudafy.NET.dll
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\bin\Debug\Cudafy.NET.xml
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\obj\Debug\Neural Network.csprojResolveAssemblyReference.cache
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\obj\Debug\Neural_Network.Form1.resources
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\obj\Debug\Neural_Network.Properties.Resources.resources
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\obj\Debug\Neural Network.csproj.GenerateResource.Cache
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\obj\Debug\Neural Network.exe
+C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Neural Network\obj\Debug\Neural Network.pdb
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\bin\Debug\Neural Network.exe.config
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\obj\Debug\Neural Network.exe
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\obj\Debug\Neural Network.pdb
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\bin\Debug\Neural Network.exe
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\bin\Debug\Neural Network.pdb
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\bin\Debug\Cudafy.NET.dll
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\bin\Debug\Cudafy.NET.xml
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\obj\Debug\Neural Network.csprojResolveAssemblyReference.cache
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\obj\Debug\Neural_Network.Form1.resources
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\obj\Debug\Neural_Network.Properties.Resources.resources
+C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Neural Network\obj\Debug\Neural Network.csproj.GenerateResource.Cache
