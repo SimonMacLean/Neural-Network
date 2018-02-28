@@ -15,8 +15,9 @@ namespace Covolutional_Neural_Network
     {
         public static int generation = 1;
         private static Random R;
-        public const int populationSize = 15;
-        public const int tests = 10;
+        const int bestPopulation = 5;
+        public int populationSize;
+        public const int tests = 100;
         private List<ConvNet> population;
         private Timer updatePopulationTimer;
         private string trainingDataPath;
@@ -26,6 +27,7 @@ namespace Covolutional_Neural_Network
             InitializeComponent();
             R = new Random();
             population = new List<ConvNet>();
+            populationSize = bestPopulation * (bestPopulation + 1) / 2;
             for (int i = 0; i < populationSize; i++)
             {
                 population.Add(new ConvNet(6, 3, 3, 37, 10));
@@ -34,7 +36,7 @@ namespace Covolutional_Neural_Network
             updatePopulationTimer.Enabled = true;
             updatePopulationTimer.Interval = 1;
             updatePopulationTimer.Tick += UpdatePopulation;
-            trainingDataPath = @"E:\Neural Network\Images\";
+            trainingDataPath = Path.Combine(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..")), @"Images\");
         }
 
         private void UpdatePopulation(object sender, EventArgs e)
@@ -48,19 +50,20 @@ namespace Covolutional_Neural_Network
                 for (int j = 0; j < population.Count; j++)
                 {
                     ConvNet nn = population[j];
-                    int guess = nn.getLikeliestOutput(randomTrainingData);
+                    List<double> outputs = nn.getOutputs(randomTrainingData).ToList();
+                    nn.avgCost = (nn.avgCost * nn.testsDone + nn.getCost(int.Parse(Directory.GetParent(randomTrainingDataPath).Name), outputs)) / (nn.testsDone + 1);
                     nn.testsDone++;
-                    if (guess == int.Parse(Directory.GetParent(randomTrainingDataPath).Name))
+                    if (nn.mostConfidentOutput(outputs) == int.Parse(Directory.GetParent(randomTrainingDataPath).Name))
                     {
                         nn.correct++;
                     }
                     population[j] = nn;
                 }
             }
-            List<int> grades = new List<int>();
+            List<double> grades = new List<double>();
             foreach (ConvNet n in population)
             {
-                grades.Add(n.correct);
+                grades.Add(n.avgCost);
             }
             ConvNet[] arrayVersion = population.ToArray();
             Array.Sort(grades.ToArray(), arrayVersion);
@@ -75,10 +78,10 @@ namespace Covolutional_Neural_Network
                     topScorers.Add(population[i]);
                     places.Add(i);
                 }
-                if (topScorers.Count >= 5)
+                if (topScorers.Count >= bestPopulation)
                     break;
             }
-            for (int i = 0; topScorers.Count < 5; i++)
+            for (int i = 0; topScorers.Count < bestPopulation; i++)
             {
                 if (places.Contains(i))
                     continue;
@@ -86,11 +89,11 @@ namespace Covolutional_Neural_Network
             }
             topScorers = Randomize(topScorers, R);
             List<ConvNet> newPopulation = new List<ConvNet>();
-            for (int i = 4; i > 0; i--)
+            for (int i = bestPopulation - 1; i > 0; i--)
             {
                 for (int j = 0; j < i; j++)
                 {
-                    newPopulation.Add(new ConvNet(topScorers[4 - i], topScorers[5 - i]));
+                    newPopulation.Add(new ConvNet(topScorers[(bestPopulation - 1) - i], topScorers[bestPopulation - i]));
                 }
             }
             population.RemoveAt(0);
@@ -154,16 +157,17 @@ namespace Covolutional_Neural_Network
     }
     public struct ConvNet
     {
+        public double avgCost;
         public const int imageWidth = 28;
         public const int imageHeight = 28;
-        public const int fullyConnectedLayers = 2;
-        public const int pixelSize = 5;
         public static Random mutationRandom;
-        public List<List<ConvNeuron>> featureMaps;
-        public List<List<Neuron>> fullyConnected;
         public int testsDone;
         public int correct;
         private Bitmap current;
+        public const int fullyConnectedLayers = 2;
+        public const int pixelSize = 5;
+        public List<List<ConvNeuron>> featureMaps;
+        public List<List<Neuron>> fullyConnected;
         private List<List<Bitmap>> inputs;
         private List<List<double>> fullyConnectedInputs;
         private List<double> outputs;
@@ -185,6 +189,7 @@ namespace Covolutional_Neural_Network
             fullyConnected = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
+            avgCost = 0;
             current = new Bitmap(28, 28);
             outputs = new List<double>();
             for (int i = 0; i < layerSizes[layerSizes.Count - 1]; i++)
@@ -231,6 +236,7 @@ namespace Covolutional_Neural_Network
             fullyConnected = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
+            avgCost = 0;
             current = new Bitmap(28, 28);
             outputs = new List<double>();
             for (int i = 0; i < layerSizes[layerSizes.Length - 1]; i++)
@@ -277,6 +283,7 @@ namespace Covolutional_Neural_Network
             fullyConnected = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
+            avgCost = 0;
             current = new Bitmap(28, 28);
             outputs = new List<double>();
             for (int i = 0; i < parentA.fullyConnected[1].Count; i++)
@@ -330,8 +337,9 @@ namespace Covolutional_Neural_Network
             fullyConnectedInputs = original.fullyConnectedInputs;
             featureMaps = original.featureMaps;
             fullyConnected = original.fullyConnected;
-            testsDone = original.testsDone;
-            correct = original.correct;
+            testsDone = 0;
+            correct = 0;
+            avgCost = 0;
             current = new Bitmap(28, 28);
             outputs = original.outputs;
         }
@@ -355,7 +363,7 @@ namespace Covolutional_Neural_Network
             fullyConnectedInputs.Add(new List<double>());
             foreach (Bitmap b in inputs[inputs.Count - 1])
             {
-                fullyConnectedInputs[0].Add(b.GetPixel(0, 0).R / 255.0);
+                fullyConnectedInputs[0].Add(b.GetPixel(0, 0).GetBrightness() / 256.0);
             }
             for (int i = 0; i < fullyConnectedLayers; i++)
             {
@@ -367,10 +375,25 @@ namespace Covolutional_Neural_Network
             }
             return fullyConnectedInputs[inputs.Count - 2];
         }
-        public int getLikeliestOutput(Bitmap input)
+        public int mostConfidentOutput(List<double> outputs)
         {
-            List<double> outputs = getOutputs(input);
-            return outputs.IndexOf(outputs.Max());
+            return outputs.ToList().IndexOf(outputs.Max());
+        }
+        public double getCost(int desired, List<double> output)
+        {
+            double totalCost = 0;
+            for (int i = 0; i < output.Count; i++)
+            {
+                if (i == desired)
+                {
+                    totalCost += (1 - output[i]) * (1 - output[i]);
+                }
+                else
+                {
+                    totalCost += output[i] * output[i];
+                }
+            }
+            return totalCost;
         }
         public Bitmap Scale(Bitmap input)
         {
@@ -471,7 +494,7 @@ namespace Covolutional_Neural_Network
                         padding.Height + (int)((bounds.Height - 2 * padding.Height) / (double)(inputs[inputs.Count - 1].Count + 1) * (j + 1) - inputs[inputs.Count - 1][j].Height * pixelSize / 2) + 3);
                 }
             }
-            g.DrawString("" + (int)(correct / (double)testsDone * 1000) / 10.0 + "% accuracy", new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 10);
+            g.DrawString("" + (int)(correct / (double)testsDone * 1000) / 10.0 + "% correct", new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 10);
             g.DrawString("Generation " + Form1.generation, new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 40);
             Form1.generation++;
         }

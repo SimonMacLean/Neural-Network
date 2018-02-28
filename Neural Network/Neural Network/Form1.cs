@@ -56,19 +56,20 @@ namespace Neural_Network
                 for (int j = 0; j < population.Count; j++)
                 {
                     NeuralNetwork nn = population[j];
-                    int guess = nn.getLikeliestOutput(randomTrainingData);
+                    List<double> outputs = nn.getOutputs(randomTrainingData).ToList();
+                    nn.avgCost = (nn.avgCost * nn.testsDone + nn.getCost(int.Parse(Directory.GetParent(randomTrainingDataPath).Name), outputs)) / (nn.testsDone + 1);
                     nn.testsDone++;
-                    if (guess == int.Parse(Directory.GetParent(randomTrainingDataPath).Name))
+                    if (nn.mostConfidentOutput(outputs) == int.Parse(Directory.GetParent(randomTrainingDataPath).Name))
                     {
                         nn.correct++;
                     }
                     population[j] = nn;
                 }
             }
-            List<int> grades = new List<int>();
+            List<double> grades = new List<double>();
             foreach (NeuralNetwork n in population)
             {
-                grades.Add(n.correct);
+                grades.Add(n.avgCost);
             }
             NeuralNetwork[] arrayVersion = population.ToArray();
             Array.Sort(grades.ToArray(), arrayVersion);
@@ -146,6 +147,7 @@ namespace Neural_Network
     }
     public struct NeuralNetwork
     {
+        public double avgCost;
         public const int imageWidth = 28;
         public const int imageHeight = 28;
         public static Random mutationRandom;
@@ -158,11 +160,11 @@ namespace Neural_Network
         private const int mutationFrequency = 15;
         public static bool operator >(NeuralNetwork a, NeuralNetwork b)
         {
-            return a.correct > b.correct;
+            return a.avgCost > b.avgCost;
         }
         public static bool operator <(NeuralNetwork a, NeuralNetwork b)
         {
-            return a.correct < b.correct;
+            return a.avgCost < b.avgCost;
         }
         public NeuralNetwork(List<int> layersizes)
         {
@@ -171,6 +173,7 @@ namespace Neural_Network
             neurons = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
+            avgCost = 0;
             current = new Bitmap(imageWidth, imageHeight);
             outputs = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             int layerSize = imageWidth * imageHeight;
@@ -197,6 +200,7 @@ namespace Neural_Network
             neurons = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
+            avgCost = 0;
             current = new Bitmap(imageWidth, imageHeight);
             outputs = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             int layerSize = imageWidth * imageHeight;
@@ -224,6 +228,7 @@ namespace Neural_Network
             neurons = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
+            avgCost = 0;
             current = new Bitmap(imageWidth, imageHeight);
             outputs = new List<double> { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
             int layerSize = imageWidth * imageHeight;
@@ -251,8 +256,9 @@ namespace Neural_Network
             mutationRandom = new Random();
             inputs = original.inputs;
             neurons = original.neurons;
-            testsDone = original.testsDone;
-            correct = original.correct;
+            testsDone = 0;
+            correct = 0;
+            avgCost = 0;
             current = new Bitmap(imageWidth, imageHeight);
             outputs = original.outputs;
         }
@@ -264,7 +270,7 @@ namespace Neural_Network
             {
                 for(int j = 0; j < imageHeight; j++)
                 {
-                    inputs[0][i * imageWidth + j] = input.GetPixel(j, i).GetBrightness();
+                    inputs[0][i * imageWidth + j] = input.GetPixel(j, i).GetBrightness() / 256.0;
                 }
             }
             for (int i = 0; i < neurons.Count; i++)
@@ -277,10 +283,25 @@ namespace Neural_Network
             }
             return inputs[inputs.Count - 1];
         }
-        public int getLikeliestOutput(Bitmap input)
+        public int mostConfidentOutput(List<double> outputs)
         {
-            double[] outputs = getOutputs(input);
             return outputs.ToList().IndexOf(outputs.Max());
+        }
+        public double getCost(int desired, List<double> output)
+        {
+            double totalCost = 0;
+            for(int i = 0; i < output.Count; i++)
+            {
+                if(i == desired)
+                {
+                    totalCost += (1 - output[i]) * (1 - output[i]);
+                }
+                else
+                {
+                    totalCost += output[i] * output[i];
+                }
+            }
+            return totalCost;
         }
         public void Draw(Graphics g, Rectangle bounds)
         {
@@ -305,7 +326,7 @@ namespace Neural_Network
                         10, 10);
                 }
             }
-            g.DrawString("" + (int)(correct / (double)testsDone * 1000) / 10.0 + "% accuracy", new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 10);
+            g.DrawString("" + (int)(correct / (double)testsDone * 1000) / 10.0 + "% correct", new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 10);
             g.DrawString("Generation " + Form1.generation, new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 40);
             Form1.generation++;
         }
