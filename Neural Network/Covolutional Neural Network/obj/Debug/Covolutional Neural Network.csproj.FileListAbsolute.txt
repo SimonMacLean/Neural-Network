@@ -21,16 +21,3 @@ C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Covolutiona
 C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.Form1.resources
 C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.Properties.Resources.resources
 C:\Users\simon\Documents\GitHub\Neural-Network-master\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional Neural Network.csproj.GenerateResource.Cache
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\bin\Debug\Covolutional_Neural_Network.exe.config
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\bin\Debug\Covolutional_Neural_Network.exe
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\bin\Debug\Covolutional_Neural_Network.pdb
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\bin\Debug\Alea.dll
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\bin\Debug\Alea.IL.dll
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\bin\Debug\Alea.Parallel.dll
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\bin\Debug\Alea.xml
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional Neural Network.csprojResolveAssemblyReference.cache
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.Form1.resources
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.Properties.Resources.resources
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional Neural Network.csproj.GenerateResource.Cache
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.exe
-C:\Users\simon\Documents\GitHub\Neural-Network\Neural Network\Covolutional Neural Network\obj\Debug\Covolutional_Neural_Network.pdb

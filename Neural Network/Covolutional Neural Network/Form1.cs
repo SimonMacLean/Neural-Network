@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -13,92 +14,146 @@ namespace Covolutional_Neural_Network
 {
     public partial class Form1 : Form
     {
-        public static int generation = 1;
-        private static Random R;
-        const int bestPopulation = 5;
-        public int populationSize;
-        public const int tests = 100;
-        private List<ConvNet> population;
+        public static int generation = 0;
+        public static Random R;
+        //const int bestPopulation = 6;
+        private const int populationSize = 100;
+        private const int tests = 1000;
+        private ConvNet[] population;
         private Timer updatePopulationTimer;
-        private string trainingDataPath;
+        //private string trainingDataPath;
         ConvNet best;
+        List<float> scores = new List<float>();
+        //private string[] files;
+        private float[][][][] allNeuronWeights;
+        private Neuron[][][] allNeurons;
+        private float[][][] allInputs;
+        private int[] layersizes;
+        private Digit[] allDigits;
         public Form1()
         {
             InitializeComponent();
-            R = new Random();
-            population = new List<ConvNet>();
-            populationSize = bestPopulation * (bestPopulation + 1) / 2;
+            typeof(Form1).InvokeMember("floatBuffered",
+                BindingFlags.SetProperty | BindingFlags.Instance | BindingFlags.NonPublic, null, this,
+                new object[] { true });
+            string[] files = Directory.GetFiles(Path.Combine(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..")), @"Images\"), "*.bmp", SearchOption.AllDirectories);
+            allDigits = new Digit[files.Length];
+            for (int i = 0; i < files.Length; i++)
+            {
+                allDigits[i] = new Digit(files[i]);
+            }
+            layersizes = new[] { 137, 57, 24, 10 };
+            allNeuronWeights = new float[populationSize][][][];
+            allNeurons = new Neuron[populationSize][][];
+            allInputs = new float[populationSize][][];
             for (int i = 0; i < populationSize; i++)
             {
-                population.Add(new ConvNet(6, 3, 3, 37, 10));
+                allNeuronWeights[i] = new float[layersizes.Length][][];
+                for (int j = 0; j < layersizes.Length; j++)
+                {
+                    allNeuronWeights[i][j] = new float[layersizes[j]][];
+                    allNeuronWeights[i][j][0] = new float[784];
+                    for (int k = 1; k < layersizes[j]; k++)
+                    {
+                        allNeuronWeights[i][j][k] = new float[layersizes[k - 1]];
+                    }
+                }
             }
-            updatePopulationTimer = new Timer();
-            updatePopulationTimer.Enabled = true;
-            updatePopulationTimer.Interval = 1;
+            R = new Random();
+            population = new ConvNet[populationSize];
+            for (int i = 0; i < populationSize; i++)
+            {
+                population[i] = new ConvNet(i, allNeuronWeights, allNeurons, allInputs);
+            }
+            updatePopulationTimer = new Timer()
+            {
+                Enabled = true,
+                Interval = 1
+            };
             updatePopulationTimer.Tick += UpdatePopulation;
-            trainingDataPath = Path.Combine(Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, @"..\..\..")), @"Images\");
+            scores.Add(10);
         }
-
+        [GpuManaged]
         private void UpdatePopulation(object sender, EventArgs e)
         {
-            string[] files = Directory.GetFiles(trainingDataPath, "*.bmp", SearchOption.AllDirectories);
+            float[][] inputs = new float[tests][];
+            string[] paths = new string[tests];
+            float[][] outputs = new float[populationSize * tests][];
+            ConvNet[] functionPopulation = population.Select(n => n).ToArray();
+            float[][][][] functionNeuronWeights = allNeuronWeights.Select(n => n).ToArray();
+            Neuron[][][] functionNeurons = allNeurons.Select(n => n).ToArray();
+            float[][][] functionInputs = allInputs.Select(n => n).ToArray();
+            int[] values = new int[tests];
             for (int i = 0; i < tests; i++)
             {
-                int number = R.Next(files.Length);
-                string randomTrainingDataPath = files[number];
-                Bitmap randomTrainingData = new Bitmap(randomTrainingDataPath);
-                for (int j = 0; j < population.Count; j++)
+                int place = R.Next(allDigits.Length);
+                values[i] = allDigits[place].value;
+                inputs[i] = allDigits[place].pixelValues;
+                for (int j = 0; j < populationSize; j++)
                 {
-                    ConvNet nn = population[j];
-                    List<double> outputs = nn.getOutputs(randomTrainingData).ToList();
-                    nn.avgCost = (nn.avgCost * nn.testsDone + nn.getCost(int.Parse(Directory.GetParent(randomTrainingDataPath).Name), outputs)) / (nn.testsDone + 1);
-                    nn.testsDone++;
-                    if (nn.mostConfidentOutput(outputs) == int.Parse(Directory.GetParent(randomTrainingDataPath).Name))
-                    {
-                        nn.correct++;
-                    }
-                    population[j] = nn;
+                    outputs[i * populationSize + j] = new float[10];
                 }
             }
-            List<double> grades = new List<double>();
+            Gpu.Default.For(0, population.Length * tests, i =>
+            {
+                outputs[i] = functionPopulation[i / tests].GetOutputs(inputs[i % tests], functionNeuronWeights, functionNeurons, functionInputs);
+            }
+            );
+            for (int i = 0; i < populationSize * tests; i++)
+            {
+                ConvNet nn = functionPopulation[i / tests];
+                nn.sumCost = nn.sumCost + nn.GetCost(values[i % tests], outputs[i]);
+                nn.testsDone++;
+                if (nn.MostConfidentOutput(outputs[i]) == values[i % tests])
+                {
+                    nn.correct++;
+                }
+                functionPopulation[i / tests] = nn;
+            }
+            population = functionPopulation.Select(n => n).ToArray();
+            allNeuronWeights = functionNeuronWeights.Select(n => n).ToArray();
+            allNeurons = functionNeurons.Select(n => n).ToArray();
+            allInputs = functionInputs.Select(n => n).ToArray();
+            float[][][][] newNeuronWeights = new float[allNeuronWeights.Length][][][];
+            Neuron[][][] newNeurons = new Neuron[allNeurons.Length][][];
+            float[][][] newInputs = new float[allInputs.Length][][];
+            List<float> grades = new List<float>();
             foreach (ConvNet n in population)
             {
-                grades.Add(n.avgCost);
+                grades.Add(n.sumCost);
             }
-            ConvNet[] arrayVersion = population.ToArray();
-            Array.Sort(grades.ToArray(), arrayVersion);
-            population = arrayVersion.Reverse().ToList();
-            best = new ConvNet(population[0]);
+            Array.Sort(grades.ToArray(), population);
+            //population = population.Reverse().ToArray();
             List<ConvNet> topScorers = new List<ConvNet>();
-            List<int> places = new List<int>();
-            for (int i = 0; i < population.Count; i++)
+            List<int> order = Randomize(Enumerable.Range(0, populationSize / 2).ToList(), R);
+            int numRemaining = populationSize / 2;
+            for (int i = populationSize - 1; i >= 0; i--)
             {
-                if (R.Next(population.Count) > i)
-                {
+                if (R.Next(populationSize) >= i || numRemaining == 0)
                     topScorers.Add(population[i]);
-                    places.Add(i);
-                }
-                if (topScorers.Count >= bestPopulation)
-                    break;
+                else
+                    numRemaining--;
             }
-            for (int i = 0; topScorers.Count < bestPopulation; i++)
-            {
-                if (places.Contains(i))
-                    continue;
-                topScorers.Add(population[i]);
-            }
-            topScorers = Randomize(topScorers, R);
+            topScorers.RemoveRange(0, numRemaining);
             List<ConvNet> newPopulation = new List<ConvNet>();
-            for (int i = bestPopulation - 1; i > 0; i--)
+            for (int i = 0; newPopulation.Count < populationSize; i++)
             {
-                for (int j = 0; j < i; j++)
+                for (int j = 0; j < 7 && newPopulation.Count < populationSize; j++)
                 {
-                    newPopulation.Add(new ConvNet(topScorers[(bestPopulation - 1) - i], topScorers[bestPopulation - i]));
+                    if (j >= 2)
+                        if (R.Next(order[i]) == 0)
+                            newPopulation.Add(new ConvNet(topScorers[order[i]], topScorers[order[(i + j) % order.Count]], newPopulation.Count, newNeuronWeights, newNeurons, newInputs, allNeuronWeights, allNeurons, allInputs));
+                        else
+                            newPopulation.Add(new ConvNet(topScorers[order[i]], topScorers[order[(i + j) % order.Count]], newPopulation.Count, newNeuronWeights, newNeurons, newInputs, allNeuronWeights, allNeurons, allInputs));
                 }
             }
-            population.RemoveAt(0);
-            population.Add(best);
-            population = newPopulation;
+            best = new ConvNet(population[0], 0, newNeuronWeights, newNeurons, newInputs, allNeuronWeights, allNeurons, allInputs);
+            newPopulation[0] = best;
+            population = newPopulation.ToArray();
+            Array.Copy(newNeuronWeights, allNeuronWeights, 0);
+            Array.Copy(newNeurons, allNeurons, 0);
+            Array.Copy(newInputs, allInputs, 0);
+            scores.Add(((float)best.correct / best.testsDone) * 100);
             Invalidate();
         }
         List<ConvNet> Randomize(List<ConvNet> sorted, Random r)
@@ -117,47 +172,46 @@ namespace Covolutional_Neural_Network
             }
             return result;
         }
+        List<int> Randomize(List<int> sorted, Random r)
+        {
+            List<int> result = new List<int>();
+            List<int> placesLeft = new List<int>();
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                placesLeft.Add(i);
+            }
+            while (placesLeft.Count > 0)
+            {
+                int placeTaken = r.Next(placesLeft.Count);
+                result.Add(sorted[placesLeft[placeTaken]]);
+                placesLeft.RemoveAt(placeTaken);
+            }
+            return result;
+        }
 
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
-            best.Draw(e.Graphics, ClientRectangle);
+            if (scores.Count > 1)
+                DrawGraph(e.Graphics, new Rectangle(10, 90, 210, 140), scores);
+            best.Draw(e.Graphics, ClientRectangle, allNeuronWeights, allNeurons);
         }
-    }
-    public struct Neuron
-    {
-        public string DNA;
-        public double threshold;
-        public List<double> weights;
-        public const int sectionLength = 4;
-        public static readonly int divisor = (int)Math.Pow(10, sectionLength);
-        public Neuron(string gene)
+        public void DrawGraph(Graphics g, Rectangle Bounds, List<float> scores)
         {
-            DNA = gene;
-            weights = new List<double>();
-            threshold = int.Parse(gene.Substring(0, sectionLength)) / (double)divisor;
-            gene = gene.Substring(sectionLength);
-            while (gene.Length >= sectionLength)
+            g.DrawRectangle(Pens.Black, Bounds);
+            g.DrawLine(Pens.Black, new Point(Bounds.Left + 10, Bounds.Top + 10), new Point(Bounds.Left + 10, Bounds.Bottom - 10));
+            g.DrawLine(Pens.Black, new Point(Bounds.Left + 10, Bounds.Bottom - 10), new Point(Bounds.Right - 10, Bounds.Bottom - 10));
+            Point origin = new Point(Bounds.Left + 10, Bounds.Bottom - 10);
+            Size graphSize = new Size(Bounds.Width - 20, Bounds.Height - 20);
+            //g.DrawLine(Pens.Red, origin, new Point(origin.X + graphSize.Width / scores.Count, (int)(origin.Y + graphSize.Height * scores[0] / 100)));
+            for (int i = 1; i < scores.Count; i++)
             {
-                weights.Add(int.Parse(gene.Substring(0, sectionLength)) / (double)divisor);
-                gene = gene.Substring(sectionLength);
+                g.DrawLine(Pens.Red, new Point(origin.X + graphSize.Width * (i - 1) / (scores.Count - 1), (int)(origin.Y - graphSize.Height * scores[i - 1] / 100)), new Point(origin.X + graphSize.Width * i / (scores.Count - 1), (int)(origin.Y - graphSize.Height * scores[i] / 100)));
             }
-        }
-        public double GetOutput(double[] input)
-        {
-            double total = 0;
-            for (int i = 0; i < input.Length; i++)
-            {
-                total += input[i] * weights[i];
-            }
-            total /= input.Length;
-            //return 1 / (1 + 1 / (Math.Pow(Math.E, Math.PI * (total - threshold))));
-            //return total >= threshold ? 1 : 0;
-            return ConvNeuron.ActivationFunction(total - threshold);
         }
     }
     public struct ConvNet
     {
-        public double avgCost;
+        public float avgCost;
         public const int imageWidth = 28;
         public const int imageHeight = 28;
         public static Random mutationRandom;
@@ -166,11 +220,11 @@ namespace Covolutional_Neural_Network
         private Bitmap current;
         public const int fullyConnectedLayers = 2;
         public const int pixelSize = 5;
-        public List<List<ConvNeuron>> featureMaps;
-        public List<List<Neuron>> fullyConnected;
-        private List<List<Bitmap>> inputs;
-        private List<List<double>> fullyConnectedInputs;
-        private List<double> outputs;
+        public ConvNeuron[][] featureMaps;
+        public Neuron[][] fullyConnected;
+        private Bitmap[][] inputs;
+        private float[][] fullyConnectedInputs;
+        private float[] outputs;
         private const int mutationFrequency = 15;
         public static bool operator >(ConvNet a, ConvNet b)
         {
@@ -180,73 +234,26 @@ namespace Covolutional_Neural_Network
         {
             return a.correct < b.correct;
         }
-        public ConvNet(List<int> layerSizes)
-        {
-            mutationRandom = new Random();
-            inputs = new List<List<Bitmap>>();
-            fullyConnectedInputs = new List<List<double>>();
-            featureMaps = new List<List<ConvNeuron>>();
-            fullyConnected = new List<List<Neuron>>();
-            testsDone = 0;
-            correct = 0;
-            avgCost = 0;
-            current = new Bitmap(28, 28);
-            outputs = new List<double>();
-            for (int i = 0; i < layerSizes[layerSizes.Count - 1]; i++)
-            {
-                outputs.Add(0);
-            }
-            int prevLayerSize = 1;
-            for (int i = 0; i < layerSizes.Count - fullyConnectedLayers; i++)
-            {
-                featureMaps.Add(new List<ConvNeuron>());
-                int layerSize = layerSizes[i];
-                prevLayerSize *= layerSize;
-                for (int j = 0; j < layerSize; j++)
-                {
-                    string neuronString = mutationRandom.Next(Neuron.divisor).ToString();
-                    for (int k = 0; k < ConvNeuron.filterSize * ConvNeuron.filterSize + 1; k++)
-                    {
-                        neuronString += mutationRandom.Next(Neuron.divisor);
-                    }
-                    featureMaps[i].Add(new ConvNeuron(neuronString));
-                }
-            }
-            for (int i = 0; i < fullyConnectedLayers; i++)
-            {
-                fullyConnected.Add(new List<Neuron>());
-                for (int j = 0; j < layerSizes[layerSizes.Count - fullyConnectedLayers + i]; j++)
-                {
-                    string neuronString = mutationRandom.Next(Neuron.divisor).ToString();
-                    for (int k = 0; k < prevLayerSize; k++)
-                    {
-                        neuronString += mutationRandom.Next(Neuron.divisor);
-                    }
-                    fullyConnected[i].Add(new Neuron(neuronString));
-                }
-                prevLayerSize = fullyConnected[i].Count;
-            }
-        }
         public ConvNet(params int[] layerSizes)
         {
             mutationRandom = new Random();
-            inputs = new List<List<Bitmap>>();
-            fullyConnectedInputs = new List<List<double>>();
-            featureMaps = new List<List<ConvNeuron>>();
-            fullyConnected = new List<List<Neuron>>();
+            inputs = new Bitmap[layerSizes.Length - fullyConnectedLayers][];
+            fullyConnectedInputs = new float[fullyConnectedLayers][];
+            featureMaps = new ConvNeuron[layerSizes.Length - fullyConnectedLayers][];
+            fullyConnected = new Neuron[fullyConnectedLayers][];
             testsDone = 0;
             correct = 0;
             avgCost = 0;
-            current = new Bitmap(28, 28);
-            outputs = new List<double>();
+            current = new Bitmap(imageWidth, imageHeight);
+            outputs = new float[layerSizes[layerSizes.Length - 1]];
             for (int i = 0; i < layerSizes[layerSizes.Length - 1]; i++)
             {
-                outputs.Add(0);
+                outputs[i] = 0;
             }
             int prevLayerSize = 1;
             for (int i = 0; i < layerSizes.Length - fullyConnectedLayers; i++)
             {
-                featureMaps.Add(new List<ConvNeuron>());
+                featureMaps[i] = new ConvNeuron[];
                 int layerSize = layerSizes[i];
                 prevLayerSize *= layerSize;
                 for (int j = 0; j < layerSize; j++)
@@ -278,14 +285,14 @@ namespace Covolutional_Neural_Network
         {
             mutationRandom = new Random();
             inputs = new List<List<Bitmap>>();
-            fullyConnectedInputs = new List<List<double>>();
+            fullyConnectedInputs = new List<List<float>>();
             featureMaps = new List<List<ConvNeuron>>();
             fullyConnected = new List<List<Neuron>>();
             testsDone = 0;
             correct = 0;
             avgCost = 0;
             current = new Bitmap(28, 28);
-            outputs = new List<double>();
+            outputs = new List<float>();
             for (int i = 0; i < parentA.fullyConnected[1].Count; i++)
             {
                 outputs.Add(0);
@@ -343,7 +350,7 @@ namespace Covolutional_Neural_Network
             current = new Bitmap(28, 28);
             outputs = original.outputs;
         }
-        public List<double> getOutputs(Bitmap input)
+        public List<float> getOutputs(Bitmap input)
         {
             inputs = new List<List<Bitmap>>();
             inputs.Add(new List<Bitmap>());
@@ -359,15 +366,15 @@ namespace Covolutional_Neural_Network
                     }
                 }
             }
-            fullyConnectedInputs = new List<List<double>>();
-            fullyConnectedInputs.Add(new List<double>());
+            fullyConnectedInputs = new List<List<float>>();
+            fullyConnectedInputs.Add(new List<float>());
             foreach (Bitmap b in inputs[inputs.Count - 1])
             {
                 fullyConnectedInputs[0].Add(b.GetPixel(0, 0).GetBrightness() / 256.0);
             }
             for (int i = 0; i < fullyConnectedLayers; i++)
             {
-                fullyConnectedInputs.Add(new List<double>());
+                fullyConnectedInputs.Add(new List<float>());
                 for (int j = 0; j < fullyConnected[i].Count; j++)
                 {
                     fullyConnectedInputs[i + 1].Add(fullyConnected[i][j].GetOutput(fullyConnectedInputs[i].ToArray()));
@@ -375,13 +382,13 @@ namespace Covolutional_Neural_Network
             }
             return fullyConnectedInputs[inputs.Count - 2];
         }
-        public int mostConfidentOutput(List<double> outputs)
+        public int mostConfidentOutput(List<float> outputs)
         {
             return outputs.ToList().IndexOf(outputs.Max());
         }
-        public double getCost(int desired, List<double> output)
+        public float getCost(int desired, List<float> output)
         {
-            double totalCost = 0;
+            float totalCost = 0;
             for (int i = 0; i < output.Count; i++)
             {
                 if (i == desired)
@@ -433,24 +440,24 @@ namespace Covolutional_Neural_Network
                     {
                         g.DrawLine(Pens.Black, 
                             padding.Width * (1 + 2 * i) - inputs[i][k].Width * pixelSize / 2 + currentWidth,
-                            padding.Height + (int)((bounds.Height - 2 * padding.Height) / (double)(inputs[i].Count + 1) * (k + 1) - inputs[i][k].Height * pixelSize / 2) + inputs[i][k].Height * pixelSize / 2,
+                            padding.Height + (int)((bounds.Height - 2 * padding.Height) / (float)(inputs[i].Count + 1) * (k + 1) - inputs[i][k].Height * pixelSize / 2) + inputs[i][k].Height * pixelSize / 2,
                             padding.Width * (2 + 2 * i) + currentWidth + ConvNeuron.filterSize * pixelSize / 2,
-                            padding.Height + (int)(((bounds.Height - 2 * padding.Height) * inputs[i].Count) / (double)(inputs[i + 1].Count + 1) * (j + 1) - inputs[i + 1][j].Height * pixelSize / 2 - ((bounds.Height - 2 * padding.Height) * (inputs[i].Count - 1)) / (double)(2 * inputs[i + 1].Count + 2) + ConvNeuron.filterSize * pixelSize / 2)
+                            padding.Height + (int)(((bounds.Height - 2 * padding.Height) * inputs[i].Count) / (float)(inputs[i + 1].Count + 1) * (j + 1) - inputs[i + 1][j].Height * pixelSize / 2 - ((bounds.Height - 2 * padding.Height) * (inputs[i].Count - 1)) / (float)(2 * inputs[i + 1].Count + 2) + ConvNeuron.filterSize * pixelSize / 2)
                         );
                     }
                     for (int k = 0; k < inputs[i].Count; k++)
                     {
                         g.DrawLine(Pens.Black,
                             padding.Width * (3 + 2 * i) - inputs[i + 1][j * inputs[i + 1].Count / featureMaps[i].Count + k].Width * pixelSize / 2 + currentWidth + ConvNeuron.filterSize * pixelSize + inputs[i + 1][0].Width * pixelSize,
-                            padding.Height + (int)((bounds.Height - 2 * padding.Height) / (double)(inputs[i + 1].Count + 1) * (j * inputs[i + 1].Count / featureMaps[i].Count + k + 1) - inputs[i + 1][j * inputs[i + 1].Count / featureMaps[i].Count + k].Height * pixelSize / 2) + inputs[i + 1][j * inputs[i + 1].Count / featureMaps[i].Count + k].Height * pixelSize / 2,
+                            padding.Height + (int)((bounds.Height - 2 * padding.Height) / (float)(inputs[i + 1].Count + 1) * (j * inputs[i + 1].Count / featureMaps[i].Count + k + 1) - inputs[i + 1][j * inputs[i + 1].Count / featureMaps[i].Count + k].Height * pixelSize / 2) + inputs[i + 1][j * inputs[i + 1].Count / featureMaps[i].Count + k].Height * pixelSize / 2,
                             padding.Width * (2 + 2 * i) + currentWidth + ConvNeuron.filterSize * pixelSize / 2,
-                            padding.Height + (int)(((bounds.Height - 2 * padding.Height) * inputs[i].Count) / (double)(inputs[i + 1].Count + 1) * (j + 1) - inputs[i + 1][j].Height * pixelSize / 2 - ((bounds.Height - 2 * padding.Height) * (inputs[i].Count - 1)) / (double)(2 * inputs[i + 1].Count + 2) + ConvNeuron.filterSize * pixelSize / 2));
+                            padding.Height + (int)(((bounds.Height - 2 * padding.Height) * inputs[i].Count) / (float)(inputs[i + 1].Count + 1) * (j + 1) - inputs[i + 1][j].Height * pixelSize / 2 - ((bounds.Height - 2 * padding.Height) * (inputs[i].Count - 1)) / (float)(2 * inputs[i + 1].Count + 2) + ConvNeuron.filterSize * pixelSize / 2));
 
 
                     }
                     g.DrawImage(Scale(featureMaps[i][j].weightsBitmap),
                         padding.Width * (2 + 2 * i) + currentWidth,
-                        padding.Height + (int)(((bounds.Height - 2 * padding.Height) * inputs[i].Count) / (double)(inputs[i + 1].Count + 1) * (j + 1) - inputs[i + 1][j].Height * pixelSize / 2 - ((bounds.Height - 2 * padding.Height) * (inputs[i].Count - 1)) / (double)(2 * inputs[i + 1].Count + 2)));
+                        padding.Height + (int)(((bounds.Height - 2 * padding.Height) * inputs[i].Count) / (float)(inputs[i + 1].Count + 1) * (j + 1) - inputs[i + 1][j].Height * pixelSize / 2 - ((bounds.Height - 2 * padding.Height) * (inputs[i].Count - 1)) / (float)(2 * inputs[i + 1].Count + 2)));
                 }
                 currentWidth += ConvNeuron.filterSize * pixelSize;
             }
@@ -461,7 +468,7 @@ namespace Covolutional_Neural_Network
                 {
                     g.DrawImage(Scale(inputs[i][j]),
                         padding.Width * (1 + 2 * i) + currentWidth,
-                        padding.Height + (int)((bounds.Height - 2 * padding.Height) / (double)(inputs[i].Count + 1) * (j + 1) - inputs[i][j].Height * pixelSize / 2));
+                        padding.Height + (int)((bounds.Height - 2 * padding.Height) / (float)(inputs[i].Count + 1) * (j + 1) - inputs[i][j].Height * pixelSize / 2));
                 }
                 currentWidth += inputs[i][0].Width * pixelSize + ConvNeuron.filterSize * pixelSize;
             }
@@ -472,12 +479,12 @@ namespace Covolutional_Neural_Network
                     int fullyConnectedThreshold = (int)(fullyConnected[i][j].threshold * 255);
                     g.DrawRectangle(Pens.Black,
                         padding.Width * (3 + 2 * (featureMaps.Count + i)) + currentWidth,
-                        padding.Height + (int)(((bounds.Height - 2 * padding.Height) / (double)(fullyConnected[i].Count + 1)) * (j + 1)),
+                        padding.Height + (int)(((bounds.Height - 2 * padding.Height) / (float)(fullyConnected[i].Count + 1)) * (j + 1)),
                         pixelSize,
                         pixelSize);
                     g.FillRectangle(new SolidBrush(Color.FromArgb(fullyConnectedThreshold, fullyConnectedThreshold, fullyConnectedThreshold)),
                         padding.Width * (3 + 2 * (featureMaps.Count + i)) + currentWidth,
-                        padding.Height + (int)(((bounds.Height - 2 * padding.Height) / (double)(fullyConnected[i].Count + 1)) * (j + 1)),
+                        padding.Height + (int)(((bounds.Height - 2 * padding.Height) / (float)(fullyConnected[i].Count + 1)) * (j + 1)),
                         pixelSize,
                         pixelSize);
                 }
@@ -489,49 +496,46 @@ namespace Covolutional_Neural_Network
                     int greyscale = (int)(fullyConnected[0][i].weights[j] * 255);
                     g.DrawLine(new Pen(Color.FromArgb(greyscale, greyscale, greyscale)),
                         padding.Width * (3 + 2 * featureMaps.Count) + currentWidth + 3,
-                        padding.Height + (int)(((bounds.Height - 2 * padding.Height) / (double)(fullyConnected[0].Count + 1)) * (i + 1)) + 3,
+                        padding.Height + (int)(((bounds.Height - 2 * padding.Height) / (float)(fullyConnected[0].Count + 1)) * (i + 1)) + 3,
                         padding.Width * (1 + 2 * (inputs.Count - 1)) + currentWidth - (inputs[inputs.Count - 1][0].Width * pixelSize + ConvNeuron.filterSize * pixelSize) + 3,
-                        padding.Height + (int)((bounds.Height - 2 * padding.Height) / (double)(inputs[inputs.Count - 1].Count + 1) * (j + 1) - inputs[inputs.Count - 1][j].Height * pixelSize / 2) + 3);
+                        padding.Height + (int)((bounds.Height - 2 * padding.Height) / (float)(inputs[inputs.Count - 1].Count + 1) * (j + 1) - inputs[inputs.Count - 1][j].Height * pixelSize / 2) + 3);
                 }
             }
-            g.DrawString("" + (int)(correct / (double)testsDone * 1000) / 10.0 + "% correct", new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 10);
+            g.DrawString("Average cost: " + (int)(avgCost * 1000)/1000.0, new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 10);
             g.DrawString("Generation " + Form1.generation, new Font(FontFamily.GenericMonospace, 20), Brushes.Black, 10, 40);
             Form1.generation++;
         }
     }
     public struct ConvNeuron
     {
-        public const int filterSize = 5;
+        public int filterSize;
         public const int subsampleSize = 4;
         public string DNA;
-        public double threshold;
-        public double[][] weights;
+        public float threshold;
+        public float[,] weights;
         public const int sectionLength = 4;
         public static readonly int divisor = (int)Math.Pow(10, sectionLength);
         public Bitmap weightsBitmap;
         public ConvNeuron(string gene)
         {
-            weightsBitmap = new Bitmap(filterSize, filterSize);
             DNA = gene;
-            weights = new double[filterSize][];
-            threshold = int.Parse(gene.Substring(0, sectionLength)) / (double)divisor;
+            filterSize = (int)Math.Sqrt(gene.Where(c => c == ' ').Count() - 1);
+            weightsBitmap = new Bitmap(filterSize, filterSize);
+            weights = new float[filterSize, filterSize];
+            threshold = float.Parse(gene.Substring(0, gene.IndexOf(' ')));
             gene = gene.Substring(sectionLength);
-            int i = 0;
+            int currentWeightNum = 0;
             while (gene.Length >= sectionLength)
             {
-                if (i % filterSize == 0)
-                {
-                    weights[i / filterSize] = new double[filterSize];
-                }
-                weights[i / filterSize][i % filterSize] = int.Parse(gene.Substring(0, sectionLength)) / (double)divisor;
-                gene = gene.Substring(sectionLength);
-                i++;
+                weights[currentWeightNum / filterSize, currentWeightNum % filterSize] = float.Parse(gene.Substring(0, gene.IndexOf(' '))); ;
+                gene = gene.Substring(gene.IndexOf(' ') + 1);
+                currentWeightNum++;
             }
-            for (i = 0; i < weights.Length; i++)
+            for (currentWeightNum = 0; currentWeightNum < filterSize; currentWeightNum++)
             {
-                for (int j = 0; j < weights[i].Length; j++)
+                for (int j = 0; j < filterSize; j++)
                 {
-                    weightsBitmap.SetPixel(j, i, Color.FromArgb((int)(weights[i][j] * 255), (int)(weights[i][j] * 255), (int)(weights[i][j] * 255)));
+                    weightsBitmap.SetPixel(j, currentWeightNum, Color.FromArgb((int)(weights[currentWeightNum, j] * 255), (int)(weights[currentWeightNum, j] * 255), (int)(weights[currentWeightNum, j] * 255)));
                 }
             }
         }
@@ -542,7 +546,7 @@ namespace Covolutional_Neural_Network
             {
                 for (int j = 0; j < output.Width; j++)
                 {
-                    double outputPixel = 0;
+                    float outputPixel = 0;
                     for (int k = 0; k < filterSize; k++)
                     {
                         for (int l = 0; l < filterSize; l++)
@@ -559,12 +563,12 @@ namespace Covolutional_Neural_Network
         }
         public static Bitmap Subsample(Bitmap input)
         {
-            Bitmap output = new Bitmap(input, (int)Math.Ceiling(input.Width / (double)subsampleSize), (int)Math.Ceiling(input.Height / (double)subsampleSize));
+            Bitmap output = new Bitmap(input, (int)Math.Ceiling(input.Width / (float)subsampleSize), (int)Math.Ceiling(input.Height / (float)subsampleSize));
+            List<int> samples = new List<int>();
             for (int i = 0; i < input.Height; i += subsampleSize)
             {
                 for (int j = 0; j < input.Width; j += subsampleSize)
                 {
-                    List<int> samples = new List<int>();
                     for (int k = 0; k < subsampleSize; k++)
                     {
                         for (int l = 0; l < subsampleSize; l++)
@@ -578,17 +582,168 @@ namespace Covolutional_Neural_Network
             }
             return output;
         }
-        public static double ActivationFunction(double input)
+        public static float ActivationFunction(float input)
         {
             return Math.Max(0, input);
         }
         public static int GetPixel(Bitmap b, int x, int y)
         {
             if (x < 0 || x >= b.Width || y < 0 || y >= b.Height)
-            {
                 return 0;
-            }
             return b.GetPixel(x, y).R;
+        }
+    }
+    public class Neuron
+    {
+        public const float maxWeightLineWidth = 2;
+        public const float thresholdEllipseDiameter = 20;
+        public const float thresholdEllipseOutlineWidth = 1;
+        public string DNA;
+        public float errorSignal;
+        public List<float[]> currentBatchWeightsNudges;
+        public float[] weights;
+        public float[] input;
+        public float weightedSum;
+        public float output;
+        public bool finalLayer;
+        public Neuron(string gene, bool isFinalLayer = false)
+        {
+            DNA = gene;
+            weights = new float[gene.Where(c => c == ' ').Count()];
+            int weight = 0;
+            errorSignal = 0;
+            currentBatchWeightsNudges = new List<float[]>();
+            while (gene.Contains(' '))
+            {
+                weights[weight] = float.Parse(gene.Substring(0, gene.IndexOf(' ')));
+                weight++;
+                gene = gene.Substring(gene.IndexOf(' ') + 1);
+            }
+            input = new float[weight];
+            weightedSum = 0;
+            output = 0;
+            finalLayer = isFinalLayer;
+        }
+        public float GetOutput(float[] inputs)
+        {
+            Array.Copy(inputs, input, inputs.Length);
+            weightedSum = 0;
+            for (int i = 0; i < input.Length; i++)
+            {
+                weightedSum += input[i] * weights[i];
+            }
+            output = ActivationFunction(weightedSum);
+            return output;
+        }
+        float ActivationFunction(float input)
+        {
+            return finalLayer ? Sigmoid(input) : SoftPlus(input);
+        }
+        float ActivationFunctionDerivative(float input)
+        {
+            return finalLayer ? SigmoidDerivative(input) : SoftPlusDerivative(input);
+        }
+        public static float LnMirrored(float input)
+        {
+            return (float)Math.Log(Math.Abs(input) + 1);
+        }
+        public static float LnMirroredDerivative(float input)
+        {
+            return (float)(1 / (Math.Abs(input) + 1));
+        }
+        public static float SigmoidDerivative(float input)
+        {
+            float ex = Math.Pow(2.718281828459, input);
+            return (float)(ex / (1 + ex) / (1 + ex));
+        }
+        public static float TanhDerivative(float input)
+        {
+            float tanh = Math.Tanh(input);
+            return (float)(1 - tanh * tanh);
+        }
+        public static float ReLUDerivative(float input)
+        {
+            return input > 0 ? 1 : 0;
+        }
+        public static float SoftPlusDerivative(float input)
+        {
+            return (float)(1 / (1 + Math.Pow(2.718281828459, -input)));
+        }
+        public static float Sigmoid(float input)
+        {
+            return (float)(1 / (1 + Math.Pow(2.718281828459, -input)));
+        }
+        public static float Tanh(float input)
+        {
+            return (float)Math.Tanh(input);
+        }
+        public static float ReLU(float input)
+        {
+            return input > 0 ? input : 0;
+        }
+        public static float SoftPlus(float input)
+        {
+            return (float)Math.Log(1 + Math.Pow(2.718281828459, input));
+        }
+        public void CalculateErrorSignal(float desiredOutput)
+        {
+            errorSignal = (output - desiredOutput) * ActivationFunctionDerivative(weightedSum);
+        }
+        public void CalculateErrorSignal(Neuron[] nextLayer, int index)
+        {
+            errorSignal = 0;
+            for (int i = 0; i < nextLayer.Length; i++)
+            {
+                errorSignal += nextLayer[i].errorSignal * nextLayer[i].weights[index];
+            }
+            errorSignal *= ActivationFunctionDerivative(weightedSum);
+        }
+        public void StoreChanges(float learningRate)
+        {
+            currentBatchWeightsNudges.Add(new float[weights.Length]);
+            for (int i = 0; i < weights.Length; i++)
+            {
+                currentBatchWeightsNudges[currentBatchWeightsNudges.Count - 1][i] = Bound((input[i] * errorSignal) * learningRate, -1, 1);
+            }
+        }
+        public static float Bound(float f, float min, float max)
+        {
+            return Math.Max(Math.Min(f, max), min);
+        }
+        public void MakeChanges(float lambda)
+        {
+            List<float> weightChanges = new List<float>();
+            for (int j = 0; j < currentBatchWeightsNudges[0].Length; j++)
+            {
+                float total = 0;
+                for (int k = 0; k < currentBatchWeightsNudges.Count; k++)
+                    total += currentBatchWeightsNudges[k][j];
+                total += weights[j] * lambda / currentBatchWeightsNudges.Count;
+                weightChanges.Add(total / currentBatchWeightsNudges.Count);
+            }
+            for (int i = 0; i < weights.Length; i++)
+            {
+                weights[i] = Bound(weights[i] - weightChanges[i], -2, 2);
+            }
+            currentBatchWeightsNudges = new List<float[]>();
+        }
+    }
+    public struct Digit
+    {
+        public int value;
+        public float[] pixelValues;
+        public Digit(string path)
+        {
+            value = int.Parse(Directory.GetParent(path).Name);
+            Bitmap image = new Bitmap(path);
+            pixelValues = new float[image.Width * image.Height];
+            for (int i = 0; i < image.Height; i++)
+            {
+                for (int j = 0; j < image.Width; j++)
+                {
+                    pixelValues[i * image.Width + j] = image.GetPixel(j, i).GetBrightness() / 128.0 - 1;
+                }
+            }
         }
     }
 }

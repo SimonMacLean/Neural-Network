@@ -1,0 +1,29 @@
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.exe.config
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.exe
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.pdb
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating_Neural_Network.Form1.resources
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating_Neural_Network.Properties.Resources.resources
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.csproj.GenerateResource.cache
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.exe
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.pdb
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.exe.config
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.exe
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.pdb
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.csprojAssemblyReference.cache
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating_Neural_Network.Form1.resources
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating_Neural_Network.Properties.Resources.resources
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.csproj.GenerateResource.cache
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.csproj.CoreCompileInputs.cache
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.exe
+H:\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.pdb
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.exe.config
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.exe
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\bin\Debug\Backpropagating Neural Network.pdb
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.csprojAssemblyReference.cache
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating_Neural_Network.Form1.resources
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating_Neural_Network.Properties.Resources.resources
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.csproj.GenerateResource.cache
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.csproj.CoreCompileInputs.cache
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.exe
+C:\Users\simon\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.pdb
+C:\Users\Simon MacLean\Desktop\Neural-Network\Neural Network\Backpropagating Neural Network\obj\Debug\Backpropagating Neural Network.csprojResolveAssemblyReference.cache
